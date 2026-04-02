@@ -630,8 +630,18 @@
           <svg viewBox="0 0 12 12"><polyline points="1.5,6 5,9.5 10.5,2.5"/></svg>
         </div>
         <div class="fix-body">
-          <div class="fix-name">露珠物理修正 — 禁止透视穿帮</div>
-          <div class="fix-detail">露珠为凸起半球形覆盖花瓣表面，内部折射花瓣颜色小倒影，不穿透花瓣</div>
+          <div class="fix-name">露珠物理修正 — 细小均匀，禁止穿帮</div>
+          <div class="fix-detail">露珠直径1-3mm，凸起半球形附着叶面，有高光反射，不透明不穿透，数量克制</div>
+        </div>
+      </div>
+
+      <div class="fix-card active" data-fix="noflower" onclick="toggleFix(this)">
+        <div class="fix-checkbox">
+          <svg viewBox="0 0 12 12"><polyline points="1.5,6 5,9.5 10.5,2.5"/></svg>
+        </div>
+        <div class="fix-body">
+          <div class="fix-name">场景限定 — 禁止多余花朵</div>
+          <div class="fix-detail">仅渲染场景中明确描述的植被，未提及花卉时不自动添加花朵装饰</div>
         </div>
       </div>
 
@@ -693,10 +703,16 @@ const FIX = {
     neg_en: 'regular shadows, oval light spots, perfect circles, uniform dappled pattern'
   },
   dewdrop: {
-    cn:  '露珠覆盖花瓣表面呈凸起半球形，内部折射花瓣颜色小倒影，露珠不透明，不穿透花瓣',
-    en:  'dewdrops sitting on petal surface as convex hemispheres, internal refracted reflection of petal color, opaque droplets with specular highlight, not transparent',
-    neg_cn: '露珠透明，露珠穿透花瓣，玻璃状水孔，透视水滴',
-    neg_en: 'transparent dewdrops, dewdrops inside petal, glass-like holes, see-through water'
+    cn:  '若画面含露珠，应细小均匀（直径1-3mm），凸起半球形附着在叶面或花瓣表面，有高光反射点，不透明，不穿透叶面，数量克制不堆砌',
+    en:  'if dewdrops present, small and uniform (1-3mm diameter), convex hemispherical on leaf or petal surface, specular highlight visible, opaque, do not penetrate surface, restrained quantity',
+    neg_cn: '大颗露珠，巨型水珠，超大水滴，露珠穿透叶面，透明水孔',
+    neg_en: 'oversized dewdrops, large water beads, giant droplets, transparent dewdrops, see-through holes in leaf'
+  },
+  noflower: {
+    cn:  '仅渲染场景描述中明确提到的植被，未提及花卉时不添加任何额外花朵或花卉装饰元素',
+    en:  'render only vegetation explicitly described in the scene, do not add extra flowers or floral elements if not specified in the scene description',
+    neg_cn: '多余花朵，随机花卉，未描述的花，画面外添加花',
+    neg_en: 'extra flowers, unspecified floral elements, randomly added flowers, flowers not in scene description'
   }
 };
 
