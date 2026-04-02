@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>摄影级视频 · 提示词生成器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --bg2: #161616;
+    --bg3: #1e1e1e;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.15);
+    --text: #e8e4dc;
+    --text-muted: #7a7570;
+    --text-dim: #4a4744;
+    --accent: #c8a97e;
+    --accent-dim: rgba(200,169,126,0.12);
+    --accent-border: rgba(200,169,126,0.35);
+    --red: #c47a5a;
+    --red-bg: rgba(196,122,90,0.1);
+    --red-border: rgba(196,122,90,0.3);
+    --green: #7aab8a;
+    --green-bg: rgba(122,171,138,0.1);
+    --radius: 8px;
+    --radius-lg: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', 'Noto Serif SC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 60px 32px 100px;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 56px;
+  }
+
+  .header-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-eyebrow::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--text-dim);
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .header-desc {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.8;
+    max-width: 480px;
+  }
+
+  /* Lang switch */
+  .lang-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 48px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 4px;
+    width: fit-content;
+  }
+
+  .lang-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 6px 20px;
+    border-radius: 40px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+
+  .lang-btn.active {
+    background: var(--accent);
+    color: #0e0e0e;
+    font-weight: 600;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 36px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    letter-spacing: 0.05em;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+
+  .section-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  /* Tags */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 7px 16px;
+    border-radius: 40px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.18s;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .tag:hover {
+    border-color: var(--border-hover);
+    color: var(--text);
+  }
+
+  .tag.active {
+    background: var(--accent-dim);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  /* Fix cards */
+  .fix-grid {
+    display: grid;
+    gap: 8px;
+  }
+
+  .fix-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .fix-card:hover {
+    border-color: var(--border-hover);
+  }
+
+  .fix-card.active {
+    border-color: var(--accent-border);
+    background: var(--accent-dim);
+  }
+
+  .fix-checkbox {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1px solid var(--border-hover);
+    background: var(--bg3);
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s;
+  }
+
+  .fix-card.active .fix-checkbox {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .fix-checkbox svg {
+    width: 10px;
+    height: 10px;
+    stroke: #0e0e0e;
+    fill: none;
+    stroke-width: 2.5;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .fix-card.active .fix-checkbox svg {
+    opacity: 1;
+  }
+
+  .fix-body {}
+
+  .fix-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+    transition: color 0.18s;
+  }
+
+  .fix-card.active .fix-name {
+    color: var(--accent);
+  }
+
+  .fix-detail {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    transition: color 0.18s;
+  }
+
+  .fix-card.active .fix-detail {
+    color: var(--text-muted);
+  }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+
+  /* Output */
+  .output-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .output-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    min-height: 120px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .output-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 2;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .neg-box {
+    background: var(--red-bg);
+    border: 1px solid var(--red-border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .neg-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--red);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .neg-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #c47a5a;
+    opacity: 0.85;
+    line-height: 1.8;
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 9px 20px;
+    border-radius: 40px;
+    border: 1px solid var(--border-hover);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.03em;
+  }
+
+  .btn:hover {
+    border-color: var(--border-hover);
+    color: var(--text);
+    background: var(--bg3);
+  }
+
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0e0e0e;
+    font-weight: 600;
+  }
+
+  .btn.primary:hover {
+    opacity: 0.88;
+  }
+
+  .notice {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    margin-left: 4px;
+    min-width: 60px;
+  }
+
+  /* Footer tips */
+  .tips {
+    margin-top: 48px;
+    border-top: 1px solid var(--border);
+    padding-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .tip-card {
+    padding: 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg2);
+  }
+
+  .tip-tool {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  .tip-content {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.8;
+  }
+
+  .tip-content code {
+    color: var(--text-dim);
+    background: var(--bg3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+
+  /* Animated dot */
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .container { padding: 40px 20px 80px; }
+    h1 { font-size: 26px; }
+    .tips { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-eyebrow">摄影级视频制作工具 · v2.1</div>
+    <h1>Prompt<br><em>Generator</em></h1>
+    <p class="header-desc">摄影级早安视频提示词生成器<br>含物理修正 · 支持中英文双语输出</p>
+  </header>
+
+  <div class="lang-row">
+    <button class="lang-btn active" onclick="setLang('cn', this)">中文提示词</button>
+    <button class="lang-btn" onclick="setLang('en', this)">English Prompt</button>
+  </div>
+
+  <!-- Scene -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">拍摄场景</span>
+    </div>
+    <div class="tags">
+      <span class="tag active" data-key="scene"
+        data-cn="清晨山谷云海，远山叠嶂，薄雾流动"
+        data-en="misty valley at dawn, layered mountain ridges receding into fog, aerial perspective">云海山谷</span>
+      <span class="tag" data-key="scene"
+        data-cn="江南石拱桥流水，青苔石板路，垂柳拂水面"
+        data-en="ancient stone arch bridge over clear stream, moss-covered cobblestones, weeping willow branches grazing water">江南石桥</span>
+      <span class="tag" data-key="scene"
+        data-cn="竹林小径，光斑透过竹叶，地面斑驳阴影"
+        data-en="bamboo forest trail, dappled sunlight through dense bamboo canopy, shadows on earthen path">竹林小径</span>
+      <span class="tag" data-key="scene"
+        data-cn="田野油菜花海，远处白墙黑瓦，斜光打地"
+        data-en="expansive rapeseed flower field, whitewashed village in background, raking morning light">油菜花田</span>
+      <span class="tag" data-key="scene"
+        data-cn="古镇窄巷，湿石板，雨后潮润石板地面倒影"
+        data-en="narrow alley in ancient town, wet cobblestones reflecting sky after rain, weathered brick walls">雨后古巷</span>
+      <span class="tag" data-key="scene"
+        data-cn="湖面木船，晨雾笼罩，远山倒影清晰"
+        data-en="still lake at early morning, wooden fishing boat moored in mist, sharp mountain reflection on water">湖面木船</span>
+      <span class="tag" data-key="scene"
+        data-cn="庭院梅树，旁枝上几朵白梅，灰瓦屋顶背景"
+        data-en="winter plum blossoms on bare branch, grey tile rooftop in soft background, minimalist composition">冬梅红花</span>
+    </div>
+  </div>
+
+  <!-- Light -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">光线 / 时段</span>
+    </div>
+    <div class="tags">
+      <span class="tag active" data-key="light"
+        data-cn="日出后15分钟黄金时段，低角度斜射，长阴影"
+        data-en="golden hour 15 minutes after sunrise, low angle warm directional light, long shadows">黄金时段</span>
+      <span class="tag" data-key="light"
+        data-cn="日出前蓝调时段，天空深靛蓝，地面轮廓清晰"
+        data-en="blue hour before sunrise, deep indigo sky, crisp silhouettes, cool ambient light">蓝调时段</span>
+      <span class="tag" data-key="light"
+        data-cn="薄雾漫射，散射光，无强烈阴影"
+        data-en="overcast morning diffused light, soft shadowless illumination, neutral color temperature">薄雾散射光</span>
+      <span class="tag" data-key="light"
+        data-cn="晴天清晨侧光，光线穿透茂密形成光柱"
+        data-en="clear morning sidelight, crepuscular rays cutting through foliage, high contrast">晨光光柱</span>
+    </div>
+  </div>
+
+  <!-- Camera -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">相机 / 镜头</span>
+    </div>
+    <div class="tags">
+      <span class="tag active" data-key="camera"
+        data-cn="索尼A7R5，85mm定焦，f/2.0，背景奶油虚化"
+        data-en="Sony A7R5, 85mm prime lens, f/2.0 aperture, creamy bokeh background, shallow depth of field">85mm 虚化</span>
+      <span class="tag" data-key="camera"
+        data-cn="哈苏中画幅，50mm，f/8全景深，色彩还原准确"
+        data-en="Hasselblad medium format, 50mm lens, f/8 deep focus, accurate color rendition, rich tonal gradation">哈苏全景深</span>
+      <span class="tag" data-key="camera"
+        data-cn="尼康Z8，24mm广角，f/11，前后景全部清晰"
+        data-en="Nikon Z8, 24mm wide angle, f/11, full front-to-back sharpness, dramatic wide perspective">24mm 广角</span>
+      <span class="tag" data-key="camera"
+        data-cn="无人机俯摄，鸟瞰视角，曲线构图"
+        data-en="drone aerial shot, bird's eye view, sweeping curve composition, high altitude perspective">无人机俯摄</span>
+    </div>
+  </div>
+
+  <!-- Grade -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">胶片调色</span>
+    </div>
+    <div class="tags">
+      <span class="tag active" data-key="grade"
+        data-cn="自然纪实色调，色温5500K，中性白平衡，无偏色"
+        data-en="natural color grading, 5500K neutral white balance, no color cast, true-to-life tones">自然中性</span>
+      <span class="tag" data-key="grade"
+        data-cn="日系胶片风，轻微褪色，高光轻拉，阴影提亮"
+        data-en="Japanese film emulation, slight fade, pulled highlights, lifted shadows, vintage feel">日系胶片</span>
+      <span class="tag" data-key="grade"
+        data-cn="冷绿清新，色温5000K偏冷，高清晰度，空气感强"
+        data-en="cool teal grade, 5000K cool bias, high clarity, fresh airy atmosphere">冷绿清新</span>
+      <span class="tag" data-key="grade"
+        data-cn="HDR自然风光，层次丰富，饱和度适中，商业摄影感"
+        data-en="natural HDR landscape, rich tonal range, moderate saturation, commercial photography look">HDR自然</span>
+    </div>
+  </div>
+
+  <!-- Detail -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">细节强化</span>
+      <span class="section-hint">可多选</span>
+    </div>
+    <div class="tags">
+      <span class="tag active" data-key="detail"
+        data-cn="空气透视感，远近层次分明，景深自然过渡"
+        data-en="atmospheric perspective, natural depth layers, smooth focus falloff">空气透视</span>
+      <span class="tag" data-key="detail"
+        data-cn="树皮纹理、石头苔藓等清晰可辨"
+        data-en="bark texture and stone moss clearly defined, tactile surface quality">苔藓质感</span>
+      <span class="tag" data-key="detail"
+        data-cn="水面细节，涟漪或倒影锐利逼真"
+        data-en="water surface detail, sharp ripple or reflection, hyper-realistic water rendering">水面细节</span>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Physics fixes -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num" style="color: var(--red); border-color: var(--red-border)">FIX</span>
+      <span class="section-title">物理错误修正</span>
+      <span class="section-hint">点击开关</span>
+    </div>
+    <div class="fix-grid">
+
+      <div class="fix-card active" data-fix="color" onclick="toggleFix(this)">
+        <div class="fix-checkbox">
+          <svg viewBox="0 0 12 12"><polyline points="1.5,6 5,9.5 10.5,2.5"/></svg>
+        </div>
+        <div class="fix-body">
+          <div class="fix-name">色温修正 — 去除AI晨橙色</div>
+          <div class="fix-detail">锁定 5500K 中性色温，轻微冷倾，明确排除晨橙色和色彩偏黄滤镜</div>
+        </div>
+      </div>
+
+      <div class="fix-card active" data-fix="shadow" onclick="toggleFix(this)">
+        <div class="fix-checkbox">
+          <svg viewBox="0 0 12 12"><polyline points="1.5,6 5,9.5 10.5,2.5"/></svg>
+        </div>
+        <div class="fix-body">
+          <div class="fix-name">地面阴影修正 — 禁止规则椭圆光斑</div>
+          <div class="fix-detail">光斑形状不规则、随风摆动伸缩、边缘模糊柔化，明确排除圆形/椭圆形光斑</div>
+        </div>
+      </div>
+
+      <div class="fix-card active" data-fix="dewdrop" onclick="toggleFix(this)">
+        <div class="fix-checkbox">
+          <svg viewBox="0 0 12 12"><polyline points="1.5,6 5,9.5 10.5,2.5"/></svg>
+        </div>
+        <div class="fix-body">
+          <div class="fix-name">露珠物理修正 — 禁止透视穿帮</div>
+          <div class="fix-detail">露珠为凸起半球形覆盖花瓣表面，内部折射花瓣颜色小倒影，不穿透花瓣</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Output -->
+  <div class="section">
+    <div class="output-label"><span class="live-dot"></span> &nbsp;生成结果</div>
+    <div class="output-box">
+      <div class="output-text" id="prompt-out">选择上方参数后自动生成提示词…</div>
+    </div>
+    <div class="neg-box" id="neg-box">
+      <div class="neg-label">⚠ 负面提示词 Negative Prompt</div>
+      <div class="neg-text" id="neg-out"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="copyMain()">复制提示词</button>
+      <button class="btn" onclick="copyNeg()">复制负面词</button>
+      <button class="btn" onclick="genRandom()">随机组合</button>
+      <span class="notice" id="notice"></span>
+    </div>
+  </div>
+
+  <!-- Tips -->
+  <div class="tips">
+    <div class="tip-card">
+      <div class="tip-tool">即梦 · Jimeng</div>
+      <div class="tip-content">用中文提示词<br>负面词粘贴到「负面提示词」栏<br>末尾加「竖屏9:16，无文字」</div>
+    </div>
+    <div class="tip-card">
+      <div class="tip-tool">Midjourney</div>
+      <div class="tip-content">用英文提示词<br>末尾加 <code>--ar 9:16 --style raw --v 6.1</code></div>
+    </div>
+    <div class="tip-card">
+      <div class="tip-tool">Flux · SD</div>
+      <div class="tip-content">正负词分开填入<br>负面加 <code>painting, illustration, CGI, oversaturated</code></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let lang = 'cn';
+
+const FIX = {
+  color: {
+    cn:  '色温5500K，轻微冷倾，去除晨橙色调，中性白平衡',
+    en:  '5500K neutral color temperature, slight cool bias, no orange cast, accurate white balance',
+    neg_cn: '暖色，橙色调，偏黄滤镜',
+    neg_en: 'warm tones, orange cast, yellow filter, overheated color'
+  },
+  shadow: {
+    cn:  '地面光斑形状不规则，随风摆动伸缩光斑，边缘模糊柔化，光斑大小不一可重叠交加，非圆形非椭圆',
+    en:  'natural irregular leaf shadow patterns on ground, directional shadow stretch, soft-edged dappled light, varied size light patches overlapping organically',
+    neg_cn: '规则光斑，圆形阴影，椭圆形光斑，均匀光影',
+    neg_en: 'regular shadows, oval light spots, perfect circles, uniform dappled pattern'
+  },
+  dewdrop: {
+    cn:  '露珠覆盖花瓣表面呈凸起半球形，内部折射花瓣颜色小倒影，露珠不透明，不穿透花瓣',
+    en:  'dewdrops sitting on petal surface as convex hemispheres, internal refracted reflection of petal color, opaque droplets with specular highlight, not transparent',
+    neg_cn: '露珠透明，露珠穿透花瓣，玻璃状水孔，透视水滴',
+    neg_en: 'transparent dewdrops, dewdrops inside petal, glass-like holes, see-through water'
+  }
+};
+
+const PRE_CN = '摄影级真实图片，';
+const SUF_CN = '，竖屏构图9:16，无文字水印，超高清4K细节。';
+const PRE_EN = 'Award-winning nature photography, ultra-realistic, ';
+const SUF_EN = ', vertical 9:16 composition, no text, no watermark, 4K hyper-detailed.';
+
+function setLang(l, btn) {
+  lang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  build();
+}
+
+function toggleFix(el) {
+  el.classList.toggle('active');
+  build();
+}
+
+function getVal(key) {
+  const el = document.querySelector(`.tag[data-key="${key}"].active`);
+  return el ? (lang === 'cn' ? el.dataset.cn : el.dataset.en) : '';
+}
+
+function getVals(key) {
+  return Array.from(document.querySelectorAll(`.tag[data-key="${key}"].active`))
+    .map(e => lang === 'cn' ? e.dataset.cn : e.dataset.en).filter(Boolean);
+}
+
+function getActiveFixes() {
+  return Array.from(document.querySelectorAll('.fix-card.active')).map(e => e.dataset.fix);
+}
+
+function build() {
+  const parts = [
+    getVal('scene'), getVal('light'), getVal('camera'), getVal('grade'),
+    ...getVals('detail')
+  ];
+  const fixes = getActiveFixes();
+  const fixParts = fixes.map(f => FIX[f][lang]);
+  const negParts  = fixes.map(f => FIX[f][lang === 'cn' ? 'neg_cn' : 'neg_en']);
+
+  const all = [...parts, ...fixParts].filter(Boolean);
+  const sep = lang === 'cn' ? '，' : ', ';
+
+  const prompt = lang === 'cn'
+    ? PRE_CN + all.join(sep) + SUF_CN
+    : PRE_EN + all.join(sep) + SUF_EN;
+
+  document.getElementById('prompt-out').textContent = prompt;
+
+  const negBox = document.getElementById('neg-box');
+  if (negParts.length) {
+    negBox.style.display = 'block';
+    document.getElementById('neg-out').textContent = negParts.join(sep);
+  } else {
+    negBox.style.display = 'none';
+  }
+}
+
+// Tag click
+document.querySelectorAll('.tag').forEach(tag => {
+  tag.addEventListener('click', function () {
+    const key = this.dataset.key;
+    if (key === 'detail') {
+      this.classList.toggle('active');
+    } else {
+      document.querySelectorAll(`.tag[data-key="${key}"]`).forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+    }
+    build();
+  });
+});
+
+function showNotice(msg) {
+  const n = document.getElementById('notice');
+  n.textContent = msg;
+  setTimeout(() => n.textContent = '', 2000);
+}
+
+function copyMain() {
+  const t = document.getElementById('prompt-out').textContent;
+  navigator.clipboard.writeText(t).then(() => showNotice('✓ 已复制'));
+}
+
+function copyNeg() {
+  const t = document.getElementById('neg-out').textContent;
+  if (!t) { showNotice('无负面词'); return; }
+  navigator.clipboard.writeText(t).then(() => showNotice('✓ 负面词已复制'));
+}
+
+function genRandom() {
+  ['scene','light','camera','grade'].forEach(key => {
+    const tags = Array.from(document.querySelectorAll(`.tag[data-key="${key}"]`));
+    tags.forEach(t => t.classList.remove('active'));
+    tags[Math.floor(Math.random() * tags.length)].classList.add('active');
+  });
+  const details = Array.from(document.querySelectorAll('.tag[data-key="detail"]'));
+  details.forEach(t => t.classList.remove('active'));
+  details.sort(() => Math.random() - 0.5).slice(0, Math.floor(Math.random() * 2) + 1)
+    .forEach(t => t.classList.add('active'));
+  build();
+}
+
+build();
+</script>
+</body>
+</html>
