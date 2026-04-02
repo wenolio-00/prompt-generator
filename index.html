@@ -655,14 +655,14 @@
     <div class="output-label"><span class="live-dot"></span> &nbsp;生成结果</div>
     <div class="output-box">
       <div class="output-text" id="prompt-out">选择上方参数后自动生成提示词…</div>
-    </div>
-    <div class="neg-box" id="neg-box">
-      <div class="neg-label">⚠ 负面提示词 Negative Prompt</div>
-      <div class="neg-text" id="neg-out"></div>
+      <div id="neg-section" style="display:none">
+        <div style="border-top:1px solid var(--red-border);margin:16px 0 12px;"></div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">⚠ 负面提示词 Negative Prompt</div>
+        <div class="output-text" id="neg-out" style="color:#c47a5a;opacity:0.85;"></div>
+      </div>
     </div>
     <div class="btn-row">
-      <button class="btn primary" onclick="copyMain()">复制提示词</button>
-      <button class="btn" onclick="copyNeg()">复制负面词</button>
+      <button class="btn primary" onclick="copyAll()">一键复制全部</button>
       <button class="btn" onclick="genRandom()">随机组合</button>
       <span class="notice" id="notice"></span>
     </div>
@@ -765,12 +765,12 @@ function build() {
 
   document.getElementById('prompt-out').textContent = prompt;
 
-  const negBox = document.getElementById('neg-box');
+  const negSection = document.getElementById('neg-section');
   if (negParts.length) {
-    negBox.style.display = 'block';
+    negSection.style.display = 'block';
     document.getElementById('neg-out').textContent = negParts.join(sep);
   } else {
-    negBox.style.display = 'none';
+    negSection.style.display = 'none';
   }
 }
 
@@ -794,15 +794,13 @@ function showNotice(msg) {
   setTimeout(() => n.textContent = '', 2000);
 }
 
-function copyMain() {
-  const t = document.getElementById('prompt-out').textContent;
-  navigator.clipboard.writeText(t).then(() => showNotice('✓ 已复制'));
-}
-
-function copyNeg() {
-  const t = document.getElementById('neg-out').textContent;
-  if (!t) { showNotice('无负面词'); return; }
-  navigator.clipboard.writeText(t).then(() => showNotice('✓ 负面词已复制'));
+function copyAll() {
+  const pos = document.getElementById('prompt-out').textContent;
+  const negSection = document.getElementById('neg-section');
+  const neg = document.getElementById('neg-out').textContent;
+  const sep = lang === 'cn' ? '\n\n负面提示词：\n' : '\n\nNegative Prompt:\n';
+  const text = (negSection.style.display !== 'none' && neg) ? pos + sep + neg : pos;
+  navigator.clipboard.writeText(text).then(() => showNotice('✓ 已复制'));
 }
 
 function genRandom() {
