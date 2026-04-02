@@ -486,25 +486,39 @@
     <div class="tags">
       <span class="tag active" data-key="scene"
         data-cn="清晨山谷云海，远山叠嶂，薄雾流动"
-        data-en="misty valley at dawn, layered mountain ridges receding into fog, aerial perspective">云海山谷</span>
+        data-en="misty valley at dawn, layered mountain ridges receding into fog, aerial perspective"
+        data-shadow-cn="山谷薄雾漫射光，无明显地面光斑，山脊轮廓在雾气中渐隐"
+        data-shadow-en="diffused misty light in valley, no distinct ground shadow patches, mountain ridges fading into fog">云海山谷</span>
       <span class="tag" data-key="scene"
         data-cn="江南石拱桥流水，青苔石板路，垂柳拂水面"
-        data-en="ancient stone arch bridge over clear stream, moss-covered cobblestones, weeping willow branches grazing water">江南石桥</span>
+        data-en="ancient stone arch bridge over clear stream, moss-covered cobblestones, weeping willow branches grazing water"
+        data-shadow-cn="垂柳枝条细丝状投影落在石板路，拱桥弧形硬边投影，水面倒影随涟漪轻微扭曲"
+        data-shadow-en="slender willow branch thread-like shadows on cobblestones, hard arc shadow from stone arch, water reflection distorted by ripples">江南石桥</span>
       <span class="tag" data-key="scene"
         data-cn="竹林小径，光斑透过竹叶，地面斑驳阴影"
-        data-en="bamboo forest trail, dappled sunlight through dense bamboo canopy, shadows on earthen path">竹林小径</span>
+        data-en="bamboo forest trail, dappled sunlight through dense bamboo canopy, shadows on earthen path"
+        data-shadow-cn="地面阴影为竹竿细长直线投影与竹叶碎片状小影交叠，随风轻微摆动变形，非圆形光斑"
+        data-shadow-en="ground shadows are thin vertical bamboo pole lines overlapping with small fragmented bamboo leaf shadows, swaying gently with wind, not circular patches">竹林小径</span>
       <span class="tag" data-key="scene"
         data-cn="田野油菜花海，远处白墙黑瓦，斜光打地"
-        data-en="expansive rapeseed flower field, whitewashed village in background, raking morning light">油菜花田</span>
+        data-en="expansive rapeseed flower field, whitewashed village in background, raking morning light"
+        data-shadow-cn="低角度斜光将花茎细杆投影拉长，花朵轮廓影散布地面，随风微颤"
+        data-shadow-en="low angle light elongates thin rapeseed stem shadows on ground, flower silhouette shadows scattered, trembling slightly in breeze">油菜花田</span>
       <span class="tag" data-key="scene"
         data-cn="古镇窄巷，湿石板，雨后潮润石板地面倒影"
-        data-en="narrow alley in ancient town, wet cobblestones reflecting sky after rain, weathered brick walls">雨后古巷</span>
+        data-en="narrow alley in ancient town, wet cobblestones reflecting sky after rain, weathered brick walls"
+        data-shadow-cn="屋檐硬边直线投影落在湿石板，雨后散射光阴影边缘柔和，无强烈圆形光斑"
+        data-shadow-en="hard straight eave shadows on wet cobblestones, soft diffused shadows after rain, no circular light patches">雨后古巷</span>
       <span class="tag" data-key="scene"
         data-cn="湖面木船，晨雾笼罩，远山倒影清晰"
-        data-en="still lake at early morning, wooden fishing boat moored in mist, sharp mountain reflection on water">湖面木船</span>
+        data-en="still lake at early morning, wooden fishing boat moored in mist, sharp mountain reflection on water"
+        data-shadow-cn="木船倒影清晰映于平静水面，芦苇细线影投于水中，随涟漪轻微扭曲"
+        data-shadow-en="sharp boat reflection on still water, thin reed shadows reflected in water, slightly distorted by ripples">湖面木船</span>
       <span class="tag" data-key="scene"
         data-cn="庭院梅树，旁枝上几朵白梅，灰瓦屋顶背景"
-        data-en="winter plum blossoms on bare branch, grey tile rooftop in soft background, minimalist composition">冬梅红花</span>
+        data-en="winter plum blossoms on bare branch, grey tile rooftop in soft background, minimalist composition"
+        data-shadow-cn="梅枝交错细线投影落在灰瓦或白墙，枝影刚硬清晰，无叶片遮挡"
+        data-shadow-en="intersecting bare plum branch line shadows on grey tiles or white wall, sharp angular branch shadows, no leaf interference">冬梅红花</span>
     </div>
   </div>
 
@@ -620,8 +634,8 @@
           <svg viewBox="0 0 12 12"><polyline points="1.5,6 5,9.5 10.5,2.5"/></svg>
         </div>
         <div class="fix-body">
-          <div class="fix-name">地面阴影修正 — 禁止规则椭圆光斑</div>
-          <div class="fix-detail">光斑形状不规则、随风摆动伸缩、边缘模糊柔化，明确排除圆形/椭圆形光斑</div>
+          <div class="fix-name">地面阴影修正 — 自动匹配场景形状</div>
+          <div class="fix-detail">竹林投竹竿竹叶影，垂柳投细丝影，梅枝投线条影，自动按场景生成正确阴影</div>
         </div>
       </div>
 
@@ -753,7 +767,14 @@ function build() {
     ...getVals('detail')
   ];
   const fixes = getActiveFixes();
-  const fixParts = fixes.map(f => FIX[f][lang]);
+  const activeScene = document.querySelector('.tag[data-key="scene"].active');
+  const fixParts = fixes.map(f => {
+    if (f === 'shadow' && activeScene) {
+      const sceneShadow = lang === 'cn' ? activeScene.dataset.shadowCn : activeScene.dataset.shadowEn;
+      if (sceneShadow) return sceneShadow;
+    }
+    return FIX[f][lang];
+  });
   const negParts  = fixes.map(f => FIX[f][lang === 'cn' ? 'neg_cn' : 'neg_en']);
 
   const all = [...parts, ...fixParts].filter(Boolean);
