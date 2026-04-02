@@ -703,30 +703,33 @@
 <script>
 let lang = 'cn';
 
+const BASE_NEG_CN = '绘画，插画，动漫，3D渲染，CG合成感，塑料质感，过度锐化，噪点，模糊，失真变形，低质量，文字，水印，过度饱和，HDR伪色';
+const BASE_NEG_EN = 'painting, illustration, anime, 3D render, CGI, composite look, plastic texture, over-sharpened, noisy, blurry, distorted, deformed, low quality, text, watermark, oversaturated, fake HDR color';
+
 const FIX = {
   color: {
     cn:  '色温5500K，轻微冷倾，去除晨橙色调，中性白平衡',
     en:  '5500K neutral color temperature, slight cool bias, no orange cast, accurate white balance',
-    neg_cn: '暖色，橙色调，偏黄滤镜',
-    neg_en: 'warm tones, orange cast, yellow filter, overheated color'
+    neg_cn: '过度暖色，橙色偏色，偏黄色温，日落橙滤镜，烛光色调，偏红晨光',
+    neg_en: 'excessive warm tones, orange color cast, yellow tint, sunset orange filter, candlelight color, red-shifted dawn'
   },
   shadow: {
     cn:  '地面光斑形状不规则，随风摆动伸缩光斑，边缘模糊柔化，光斑大小不一可重叠交加，非圆形非椭圆',
     en:  'natural irregular leaf shadow patterns on ground, directional shadow stretch, soft-edged dappled light, varied size light patches overlapping organically',
-    neg_cn: '规则光斑，圆形阴影，椭圆形光斑，均匀光影',
-    neg_en: 'regular shadows, oval light spots, perfect circles, uniform dappled pattern'
+    neg_cn: '规则圆形光斑，均匀椭圆阴影，对称光影排列，人造打光感，均匀散落光点',
+    neg_en: 'regular circular light patches, uniform oval shadows, symmetrical dappled pattern, artificial studio lighting, evenly spaced light dots'
   },
   dewdrop: {
     cn:  '若画面含露珠，应细小均匀（直径1-3mm），凸起半球形附着在叶面或花瓣表面，有高光反射点，不透明，不穿透叶面，数量克制不堆砌',
     en:  'if dewdrops present, small and uniform (1-3mm diameter), convex hemispherical on leaf or petal surface, specular highlight visible, opaque, do not penetrate surface, restrained quantity',
-    neg_cn: '大颗露珠，巨型水珠，超大水滴，露珠穿透叶面，透明水孔',
-    neg_en: 'oversized dewdrops, large water beads, giant droplets, transparent dewdrops, see-through holes in leaf'
+    neg_cn: '超大露珠，玻璃球状水珠，露珠穿入叶片内部，透明水洞，水滴悬浮空中，不真实水珠尺寸',
+    neg_en: 'oversized dewdrops, glass-ball water drops, dewdrops inside leaf, transparent holes in petals, floating water drops, unrealistic droplet scale'
   },
   noflower: {
     cn:  '仅渲染场景描述中明确提到的植被，未提及花卉时不添加任何额外花朵或花卉装饰元素',
     en:  'render only vegetation explicitly described in the scene, do not add extra flowers or floral elements if not specified in the scene description',
-    neg_cn: '多余花朵，随机花卉，未描述的花，画面外添加花',
-    neg_en: 'extra flowers, unspecified floral elements, randomly added flowers, flowers not in scene description'
+    neg_cn: '无关花朵，AI自动填充的花卉，场景外花卉装饰，过多花卉堆叠',
+    neg_en: 'unrelated flowers, AI-hallucinated blossoms, scene-irrelevant floral elements, excessive flower decoration'
   }
 };
 
@@ -775,7 +778,7 @@ function build() {
     }
     return FIX[f][lang];
   });
-  const negParts  = fixes.map(f => FIX[f][lang === 'cn' ? 'neg_cn' : 'neg_en']);
+  const fixNegParts = fixes.map(f => FIX[f][lang === 'cn' ? 'neg_cn' : 'neg_en']);
 
   const all = [...parts, ...fixParts].filter(Boolean);
   const sep = lang === 'cn' ? '，' : ', ';
@@ -786,13 +789,10 @@ function build() {
 
   document.getElementById('prompt-out').textContent = prompt;
 
-  const negSection = document.getElementById('neg-section');
-  if (negParts.length) {
-    negSection.style.display = 'block';
-    document.getElementById('neg-out').textContent = negParts.join(sep);
-  } else {
-    negSection.style.display = 'none';
-  }
+  const baseNeg = lang === 'cn' ? BASE_NEG_CN : BASE_NEG_EN;
+  const allNeg = [baseNeg, ...fixNegParts].filter(Boolean).join(sep);
+  document.getElementById('neg-section').style.display = 'block';
+  document.getElementById('neg-out').textContent = allNeg;
 }
 
 // Tag click
@@ -817,10 +817,9 @@ function showNotice(msg) {
 
 function copyAll() {
   const pos = document.getElementById('prompt-out').textContent;
-  const negSection = document.getElementById('neg-section');
   const neg = document.getElementById('neg-out').textContent;
   const sep = lang === 'cn' ? '\n\n负面提示词：\n' : '\n\nNegative Prompt:\n';
-  const text = (negSection.style.display !== 'none' && neg) ? pos + sep + neg : pos;
+  const text = neg ? pos + sep + neg : pos;
   navigator.clipboard.writeText(text).then(() => showNotice('✓ 已复制'));
 }
 
